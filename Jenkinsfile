@@ -9,7 +9,6 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                // Checkout your repo
                 git branch: 'main', url: 'https://github.com/Narayanansankar/react-docker-ci-cd.git'
             }
         }
@@ -17,10 +16,8 @@ pipeline {
         stage('Install & Build React App') {
             steps {
                 dir('my-app') {
-                    // Install dependencies
-                    bat 'npm install'
-                    // Build React app
-                    bat 'npm run build'
+                    sh 'npm install'
+                    sh 'npm run build'
                 }
             }
         }
@@ -28,7 +25,6 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Build Docker image with the latest build number
                     docker.build("${env.IMAGE_NAME}:${env.BUILD_NUMBER}", "./my-app")
                 }
             }
@@ -37,11 +33,9 @@ pipeline {
         stage('Run Docker Container') {
             steps {
                 script {
-                    // Stop previous container if running
-                    bat 'docker stop react-docker-app || exit 0'
-                    bat 'docker rm react-docker-app || exit 0'
-                    // Run container
-                    bat "docker run -d --name react-docker-app -p 3000:80 ${env.IMAGE_NAME}:${env.BUILD_NUMBER}"
+                    sh 'docker stop react-docker-app || true'
+                    sh 'docker rm react-docker-app || true'
+                    sh "docker run -d --name react-docker-app -p 3000:80 ${env.IMAGE_NAME}:${env.BUILD_NUMBER}"
                 }
             }
         }
