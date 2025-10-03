@@ -1,20 +1,16 @@
 pipeline {
-    agent {
-        docker {
-            image 'node:lts'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
-        }
-    }
+    agent any
 
     environment {
-        IMAGE_NAME = "react-docker-app"
+        DOCKER_IMAGE = "react-app:latest"
+        CONTAINER_NAME = "react-app-container"
+        APP_PORT = "3000"
     }
 
     stages {
-
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/Narayanansankar/react-docker-ci-cd.git'
+                git 'https://github.com/Narayanansankar/react-docker-ci-cd.git'
             }
         }
 
@@ -29,29 +25,33 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    docker.build("${env.IMAGE_NAME}:${env.BUILD_NUMBER}", "./my-app")
-                }
+                sh """
+                    docker build -t $DOCKER_IMAGE ./my-app
+                """
             }
         }
 
         stage('Run Docker Container') {
             steps {
-                script {
-                    sh 'docker stop react-docker-app || true'
-                    sh 'docker rm react-docker-app || true'
-                    sh "docker run -d --name react-docker-app -p 3000:80 ${env.IMAGE_NAME}:${env.BUILD_NUMBER}"
-                }
+                sh """
+                    # Stop previous container if exists
+                    if [ \$(docker ps -aq -f name=$CONTAINER_NAME) ]; then
+                        docker rm -f $CONTAINER_NAME
+                    fi
+
+                    # Run new container
+                    docker run -d -p $APP_PORT:3000 --name $CONTAINER_NAME $DOCKER_IMAGE
+                """
             }
         }
     }
 
     post {
         success {
-            echo 'Build, Docker image, and container deployment successful!'
+            echo "Pipeline completed successfully!"
         }
         failure {
-            echo 'Pipeline failed!'
+            echo "Pipeline failed!"
         }
     }
 }
