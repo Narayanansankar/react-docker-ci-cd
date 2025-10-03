@@ -2,11 +2,12 @@ pipeline {
     agent any
 
     tools {
-        nodejs "node-18"  // This tells Jenkins to use the NodeJS installation you configured
+        nodejs "node-18"   // Make sure this matches the NodeJS installation name in Jenkins
     }
 
     environment {
-        // any environment variables
+        DOCKER_IMAGE = "react-app-image"
+        CONTAINER_NAME = "react-app-container"
     }
 
     stages {
@@ -27,23 +28,28 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t react-app-image .'
+                sh """
+                    docker build -t $DOCKER_IMAGE .
+                """
             }
         }
 
         stage('Run Docker Container') {
             steps {
-                sh 'docker run -d -p 3000:3000 react-app-image'
+                sh """
+                    docker rm -f $CONTAINER_NAME || true
+                    docker run -d --name $CONTAINER_NAME -p 3000:3000 $DOCKER_IMAGE
+                """
             }
         }
     }
 
     post {
-        failure {
-            echo 'Pipeline failed!'
-        }
         success {
             echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed!'
         }
     }
 }
