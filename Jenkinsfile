@@ -1,50 +1,39 @@
 pipeline {
-  agent any
+    agent any
 
-  environment {
-    IMAGE = "your-dockerhub-username/react-docker-ci-cd"
-  }
-
-  stages {
-    stage('Checkout') {
-      steps {
-        checkout scm
-      }
+    environment {
+        IMAGE_NAME = "react-docker-app"
     }
 
-    stage('Install & Build') {
-      steps {
-        dir('my-app') {
-          sh 'npm ci'
-          sh 'npm run build'
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/narayanansankar/react-docker-ci-cd.git'
+            }
         }
-      }
-    }
 
-    stage('Build Docker Image') {
-      steps {
-        sh "docker build -t ${IMAGE}:$BUILD_NUMBER ."
-      }
-    }
+        stage('Install & Build') {
+            steps {
+                dir('my-app') {
+                    bat 'npm install'
+                    bat 'npm run build'
+                }
+            }
+        }
 
-    stage('Push Image') {
-      environment {
-        DOCKERHUB = credentials('dockerhub-creds') // username/password stored in Jenkins
-      }
-      steps {
-        sh "echo ${DOCKERHUB_PSW} | docker login -u ${DOCKERHUB_USR} --password-stdin"
-        sh "docker push ${IMAGE}:$BUILD_NUMBER"
-      }
-    }
+        stage('Build Docker Image') {
+            steps {
+                bat 'docker build -t %IMAGE_NAME% .'
+            }
+        }
 
-    stage('Deploy') {
-      steps {
-        // stop old container, remove, run new - adjust as needed for your environment
-        sh '''
-          docker rm -f react-docker-app || true
-          docker run -d --name react-docker-app -p 3000:80 ${IMAGE}:$BUILD_NUMBER
-        '''
-      }
+        stage('Run Container') {
+            steps {
+                bat '''
+                  docker rm -f react-container || exit 0
+                  docker run -d -p 3000:80 --name react-container %IMAGE_NAME%
+                '''
+            }
+        }
     }
-  }
 }
